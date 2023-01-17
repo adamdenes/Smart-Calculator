@@ -50,3 +50,34 @@ each other, the program still should work.
 > /exit
 Bye!
 ```
+
+## Stage 5/7: Error!
+
+The program should print Invalid expression in cases when the given expression
+has an invalid format. If a user enters an invalid command, the program must 
+print Unknown command. All messages must be printed without quotes. 
+
+The program must never throw an exception.
+
+### Examples
+```
+> 8 + 7 - 4
+11
+> abc
+Invalid expression
+> 123+
+Invalid expression
+> +15
+15
+> 18 22
+Invalid expression
+>
+> -22
+-22
+> 22-
+Invalid expression
+> /go
+Unknown command
+> /exit
+Bye!
+```
