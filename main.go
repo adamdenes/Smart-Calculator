@@ -3,10 +3,13 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
 	"strconv"
+	"unicode"
+	"unicode/utf8"
 )
 
 type Token struct {
@@ -37,21 +40,53 @@ func (ts *TokenStream) get() *Token {
 func main() {
 	for {
 		in := input()
-		switch string(in) {
-		case "/exit":
-			fmt.Println("Bye!")
-			os.Exit(0)
-		case "/help":
-			fmt.Println("The program tries to be a simple calculator")
-		case "":
-			continue
-		default:
+
+		if bytes.HasPrefix(in, []byte("/")) {
+			switch string(in) {
+			case "/exit":
+				fmt.Println("Bye!")
+				os.Exit(0)
+			case "/help":
+				fmt.Println("The program tries to be a simple calculator")
+			case "":
+				continue
+			default:
+				fmt.Println("Unknown command")
+			}
+		} else {
+			err := sanitize(in)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
 			list := tokenize(in)
-			// fill the token stream with the first token
+			// fill the token stream
 			ts := TokenStream{list, 0}
+
 			fmt.Println(ts.expression())
 		}
 	}
+}
+
+// TODO: check for invalid expressions
+func sanitize(b []byte) error {
+	err := "Invalid expression"
+
+	// err if operator is last
+	lastRune, _ := utf8.DecodeLastRune(b)
+	if lastRune == '-' || lastRune == '+' {
+		return errors.New(err)
+	}
+
+	for _, r := range bytes.Runes(b) {
+		// err if char is letter
+		if unicode.IsLetter(r) {
+			return errors.New(err)
+		}
+
+	}
+
+	return nil
 }
 
 // read the input from stdin, line by line
@@ -175,6 +210,6 @@ func (ts *TokenStream) primary() int {
 	if t.value != 0 { // check if the token is a number
 		return t.value
 	}
-	fmt.Println("Error: expected number or '('")
+	//fmt.Println("Error: expected number or '('")
 	return 0
 }
