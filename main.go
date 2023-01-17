@@ -12,11 +12,6 @@ import (
 type Token struct {
 	kind  rune
 	value int
-	next  *Token // points to the next token
-}
-
-func (t *Token) getToken() *Token {
-	return t.next
 }
 
 type TokenStream struct {
@@ -38,8 +33,8 @@ func (ts *TokenStream) get() *Token {
 	}
 	return nil
 }
+
 func main() {
-	// TODO: Expression - Term - Primary - Number
 	for {
 		in := input()
 		switch string(in) {
@@ -59,6 +54,7 @@ func main() {
 	}
 }
 
+// read the input from stdin, line by line
 func input() []byte {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -70,6 +66,7 @@ func input() []byte {
 	return bytes.TrimSpace(line)
 }
 
+// creates a slice of tokens out of the input bytes
 func tokenize(b []byte) []Token {
 
 	var tokens []Token
@@ -83,7 +80,7 @@ func tokenize(b []byte) []Token {
 		if s == "-" && i == 0 {
 			// check if the next token is number, if not, it is just an operator
 			if operator, err := strconv.Atoi(string(matches[i+1])); err != nil {
-				tokens = append(tokens, Token{rune(s[0]), operator, nil})
+				tokens = append(tokens, Token{rune(s[0]), operator})
 			}
 			negative = s
 		} else if value, err := strconv.Atoi(s); err == nil {
@@ -91,20 +88,20 @@ func tokenize(b []byte) []Token {
 			if negative == "-" {
 				negative += s
 				val, _ := strconv.Atoi(negative)
-				tokens = append(tokens, Token{rune(s[0]), val, nil})
+				tokens = append(tokens, Token{rune(s[0]), val})
 			} else {
 				// check if the token is a number
-				tokens = append(tokens, Token{rune(s[0]), value, nil})
+				tokens = append(tokens, Token{rune(s[0]), value})
 			}
-
 		} else {
 			// if the token is not a number, it must be an operator or a parenthesis
-			tokens = append(tokens, Token{rune(s[0]), 0, nil})
+			tokens = append(tokens, Token{rune(s[0]), 0})
 		}
 	}
 	return tokens
 }
 
+// expression recursively evaluates the terms
 func (ts *TokenStream) expression() int {
 	left := ts.term()
 	//fmt.Printf("EXPRESSION(): Left->\t %v\n", left)
@@ -129,6 +126,7 @@ func (ts *TokenStream) expression() int {
 	}
 }
 
+// `term` will provide the primary for the expression
 func (ts *TokenStream) term() int {
 	left := ts.primary()
 	//fmt.Printf("TERM(): Left->\t %v\n", left)
@@ -152,6 +150,7 @@ func (ts *TokenStream) term() int {
 	}
 }
 
+// `primary` returns the most basic component, a number
 func (ts *TokenStream) primary() int {
 	t := ts.get()
 	//fmt.Printf("PRIMARY(): Token-> %v\n", t)
