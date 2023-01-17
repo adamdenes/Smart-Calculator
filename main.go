@@ -41,7 +41,7 @@ func main() {
 	for {
 		in := input()
 
-		if bytes.HasPrefix(in, []byte("/")) {
+		if bytes.HasPrefix(in, []byte("/")) || string(in) == "" {
 			switch string(in) {
 			case "/exit":
 				fmt.Println("Bye!")
@@ -83,7 +83,6 @@ func sanitize(b []byte) error {
 		if unicode.IsLetter(r) {
 			return errors.New(err)
 		}
-
 	}
 
 	return nil
