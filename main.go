@@ -49,8 +49,6 @@ func (a *Assignment) add(v Variable) {
 
 	if err != nil {
 		prev := a.lookup(v)
-		fmt.Printf("found it! val=%v\n", prev)
-		fmt.Println("NUM", prev)
 		(*a)[v.name] = prev
 	} else if _, ok := (*a)[v.name]; !ok {
 		(*a)[v.name] = num
@@ -66,7 +64,6 @@ func (a *Assignment) lookup(v Variable) int {
 			return (*a)[key]
 		}
 	}
-
 	return 0
 }
 
@@ -76,6 +73,7 @@ func (v *Variable) printVar() {
 
 func main() {
 	var list []Token
+	v := Variable{}
 	a := make(Assignment)
 
 	for {
@@ -96,9 +94,10 @@ func main() {
 			}
 		} else if bytes.Contains(in, []byte("=")) {
 			// the input is an assignment
-			v := makeVar(in)
+			v = makeVar(in)
 			a.add(v)
-			fmt.Printf("a: %v\n", a)
+		} else if content, ok := a[string(in)]; ok {
+			fmt.Println(content)
 		} else {
 			// the input is an expression
 			err := sanitize(in)
@@ -116,20 +115,12 @@ func main() {
 }
 
 func makeVar(b []byte) Variable {
-	myVar := Variable{}
-
 	re := regexp.MustCompile(`\w+|-?\d+`)
 	matches := re.FindAll(b, -1)
-	fmt.Printf("%q\n", matches)
-
-	myVar.name = string(matches[0])
-	myVar.value = string(matches[1])
-
-	return myVar
-}
-
-func assignment() {
-
+	return Variable{
+		name:  string(matches[0]),
+		value: string(matches[1]),
+	}
 }
 
 // read the input from stdin, line by line
