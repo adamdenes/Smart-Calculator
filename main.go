@@ -12,7 +12,12 @@ import (
 	"unicode/utf8"
 )
 
-type Variable map[string]int
+type Assignment map[string]int
+
+type Variable struct {
+	name  string
+	value string
+}
 
 type Token struct {
 	kind  rune
@@ -39,10 +44,44 @@ func (ts *TokenStream) get() *Token {
 	return nil
 }
 
+func (a *Assignment) add(v Variable) {
+	num, err := strconv.Atoi(v.value)
+
+	if err != nil {
+		prev := a.lookup(v)
+		fmt.Printf("found it! val=%v\n", prev)
+		fmt.Println("NUM", prev)
+		(*a)[v.name] = prev
+	} else if _, ok := (*a)[v.name]; !ok {
+		(*a)[v.name] = num
+	} else {
+		(*a)[v.name] = num
+	}
+}
+
+func (a *Assignment) lookup(v Variable) int {
+	// check if the value is the same as one of the keys
+	for key := range *a {
+		if v.value == key {
+			return (*a)[key]
+		}
+	}
+
+	return 0
+}
+
+func (v *Variable) printVar() {
+	fmt.Println(v.value)
+}
+
 func main() {
+	var list []Token
+	a := make(Assignment)
+
 	for {
 		in := input()
 
+		// the input is a command
 		if bytes.HasPrefix(in, []byte("/")) || string(in) == "" {
 			switch string(in) {
 			case "/exit":
@@ -55,19 +94,54 @@ func main() {
 			default:
 				fmt.Println("Unknown command")
 			}
+		} else if bytes.Contains(in, []byte("=")) {
+			// the input is an assignment
+			v := makeVar(in)
+			a.add(v)
+			fmt.Printf("a: %v\n", a)
 		} else {
+			// the input is an expression
 			err := sanitize(in)
 			if err != nil {
 				fmt.Println(err)
 				continue
 			}
-			list := tokenize(in)
+			list = tokenize(in)
 			// fill the token stream
 			ts := TokenStream{list, 0}
 
 			fmt.Println(ts.expression())
 		}
 	}
+}
+
+func makeVar(b []byte) Variable {
+	myVar := Variable{}
+
+	re := regexp.MustCompile(`\w+|-?\d+`)
+	matches := re.FindAll(b, -1)
+	fmt.Printf("%q\n", matches)
+
+	myVar.name = string(matches[0])
+	myVar.value = string(matches[1])
+
+	return myVar
+}
+
+func assignment() {
+
+}
+
+// read the input from stdin, line by line
+func input() []byte {
+	reader := bufio.NewReader(os.Stdin)
+
+	line, err := reader.ReadBytes('\n')
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: input: %v", err)
+	}
+
+	return bytes.TrimSpace(line)
 }
 
 // check for invalid expressions
@@ -83,27 +157,13 @@ func sanitize(b []byte) error {
 	return nil
 }
 
-// read the input from stdin, line by line
-func input() []byte {
-	reader := bufio.NewReader(os.Stdin)
-
-	line, err := reader.ReadBytes('\n')
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: input: %v", err)
-	}
-
-	return bytes.TrimSpace(line)
-}
-
 // creates a slice of tokens out of the input bytes
 func tokenize(b []byte) []Token {
 
 	var tokens []Token
 	// regular expression to match digits, operators, and parentheses
-	re := regexp.MustCompile(`\d+|[+\-*/()%=]|-?\d+`)
+	re := regexp.MustCompile(`\d+|[+\-*/()%]|-?\d+`)
 	matches := re.FindAll(b, -1)
-
-	// if `=` is present in input it is an assignment
 
 	var negative string
 	for i, match := range matches {
