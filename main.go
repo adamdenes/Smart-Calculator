@@ -12,6 +12,8 @@ import (
 	"unicode/utf8"
 )
 
+type Variable map[string]int
+
 type Token struct {
 	kind  rune
 	value int
@@ -68,21 +70,14 @@ func main() {
 	}
 }
 
-// TODO: check for invalid expressions
+// check for invalid expressions
 func sanitize(b []byte) error {
 	err := "Invalid expression"
 
-	// err if operator is last
+	// err if operator is last or not digit
 	lastRune, _ := utf8.DecodeLastRune(b)
-	if lastRune == '-' || lastRune == '+' {
+	if !unicode.IsDigit(lastRune) {
 		return errors.New(err)
-	}
-
-	for _, r := range bytes.Runes(b) {
-		// err if char is letter
-		if unicode.IsLetter(r) {
-			return errors.New(err)
-		}
 	}
 
 	return nil
@@ -105,8 +100,10 @@ func tokenize(b []byte) []Token {
 
 	var tokens []Token
 	// regular expression to match digits, operators, and parentheses
-	re := regexp.MustCompile(`\d+|[+\-*/()]|-?\d+`)
+	re := regexp.MustCompile(`\d+|[+\-*/()%=]|-?\d+`)
 	matches := re.FindAll(b, -1)
+
+	// if `=` is present in input it is an assignment
 
 	var negative string
 	for i, match := range matches {
@@ -134,6 +131,28 @@ func tokenize(b []byte) []Token {
 	}
 	return tokens
 }
+
+/*
+Expression Grammar
+
+Expression:
+    Term
+    Expression '+' Term
+    Expression '-' Term
+
+Term:
+    Primary
+    Term '*' Primary
+    Term '/' Primary
+    Term '%' Primary
+
+Primary:
+    Number
+    '('Expression')'
+
+Number:
+    integer literal
+*/
 
 // expression recursively evaluates the terms
 func (ts *TokenStream) expression() int {
@@ -177,6 +196,8 @@ func (ts *TokenStream) term() int {
 			left *= ts.primary()
 		case '/':
 			left /= ts.primary()
+		case '%':
+			left %= ts.primary()
 		default:
 			ts.putBack()
 			return left
