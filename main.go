@@ -9,77 +9,20 @@ import (
 	"regexp"
 	"strconv"
 	"unicode"
-	"unicode/utf8"
 )
 
-type Assignment map[string]int
-
-type Variable struct {
-	name  string
-	value string
-}
+const (
+	LHS = iota
+	RHS
+)
 
 type Token struct {
-	kind  rune
-	value int
-}
-
-type TokenStream struct {
-	tokens []Token // slice of tokens
-	pos    int     // current position in the slice
-}
-
-func (ts *TokenStream) putBack() {
-	if ts.pos > 0 {
-		ts.pos--
-	}
-}
-
-func (ts *TokenStream) get() *Token {
-	if ts.pos < len(ts.tokens) {
-		t := &ts.tokens[ts.pos]
-		ts.pos++
-		return t
-	}
-	return nil
-}
-
-func (a *Assignment) add(v Variable) error {
-	// assign value of another Variable
-	if _, ok := (*a)[v.value]; ok {
-		(*a)[v.name] = (*a)[v.value]
-		return nil
-	}
-	num, err := strconv.Atoi(v.value)
-	if err != nil {
-		return errors.New("add(): Invalid assignment")
-	}
-
-	// create / update var
-	if _, ok := (*a)[v.name]; !ok {
-		(*a)[v.name] = num
-	} else {
-		(*a)[v.name] = num
-	}
-
-	return nil
-}
-
-func (a *Assignment) lookup(key string) error {
-	if len(*a) == 0 {
-		//	fmt.Println("lookup(): len(a) =", len(*a))
-		return nil
-	}
-
-	if content, ok := (*a)[key]; ok {
-		fmt.Println(content)
-		return nil
-	}
-	return errors.New("Unknown variable")
+	Kind  rune
+	Value int
+	Name  string
 }
 
 func main() {
-	var list []Token
 	a := make(Assignment)
 
 	for {
@@ -92,19 +35,50 @@ func main() {
 		case isCmd(in):
 			// the input is a command
 			doCmd(in)
-		case isAssignment(in):
-			// the input is an assignment
-			doAssign(in, a)
 		default:
 			// the input is an expression
-			list = tokenize(in)
-			if list != nil {
+			list, err := tokenize(in)
+			if err != nil {
+				fmt.Println(err)
+			} else {
 				// fill the token stream
 				ts := TokenStream{list, 0}
-				fmt.Println(ts.expression())
+				fmt.Printf("%v\n", ts)
+				fmt.Println(ts.statement(&a))
 			}
 		}
 	}
+}
+
+func checkOperands(operand *Token, a *Assignment, side int) error {
+	switch side {
+	case LHS:
+		fmt.Printf("\t-> LHS operand.name=%q\n", operand.Name)
+
+		if !onlyLetters([]byte(operand.Name)) {
+			return errors.New("checkLhs(): Invalid identifier LHS")
+		}
+	case RHS:
+		fmt.Printf("\t-> RHS operand.name=%q\n", operand.Name)
+
+		val, lookupErr := a.lookup(string(operand.Kind))
+		fmt.Printf("what is this val=%v, error=%v\n", val, lookupErr)
+		operand.Value = val
+		fmt.Printf("kind=%q, val=%v, name=%q\n", operand.Kind, operand.Value, operand.Name)
+
+		if !onlyDigits([]byte(operand.Name)) {
+			return errors.New("checkRhs(): Invalid assignment RHS")
+		}
+	}
+	return nil
+}
+
+func defineVar(name string, val int, a *Assignment) error {
+	err := a.add(Variable{name, strconv.Itoa(val)})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func isCmd(b []byte) bool {
@@ -126,65 +100,28 @@ func doCmd(b []byte) {
 	}
 }
 
-func isAssignment(b []byte) bool {
-	if bytes.Contains(b, []byte("=")) &&
-		unicode.IsLetter(bytes.Runes(b)[0]) {
-		return true
-	}
-	return false
-}
-
-func doAssign(b []byte, m Assignment) {
-	v, assignErr := makeVar(b)
-
-	if assignErr != nil {
-		fmt.Println(assignErr)
-		return
-	}
-
-	err := m.lookup(v.name)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	addErr := m.add(v)
-	if addErr != nil {
-		fmt.Println(addErr)
-		return
-	}
-}
-
-func makeVar(b []byte) (Variable, error) {
-	if bytes.Count(b, []byte("=")) > 1 {
-		return Variable{}, errors.New("makeVar(): Invalid assignment")
-	}
-
-	re := regexp.MustCompile(`\w+|-?\d+`)
-	matches := re.FindAll(b, -1)
-
-	var lhs string
-	if len(matches) != 0 {
-		lhs = string(matches[0])
-	}
-
-	for _, r := range lhs {
+func onlyLetters(b ...[]byte) bool {
+	//fmt.Printf("onlyLetters(): -> \t%s %v\n", string(b[0]), b)
+	for _, r := range bytes.Runes(b[0]) {
 		if !unicode.IsLetter(r) {
-			return Variable{}, errors.New("makeVar(): Invalid identifier")
+			//fmt.Printf("onlyLetters(): -> \t%t\n", false)
+			return false
 		}
 	}
+	//fmt.Printf("onlyLetters(): -> \t%t\n", true)
+	return true
+}
 
-	var rhs string
-	if len(matches) == 1 {
-		rhs = string(matches[0])
-	} else {
-		rhs = string(matches[1])
+func onlyDigits(b ...[]byte) bool {
+	//fmt.Printf("onlyLetters(): -> \t%s %v\n", string(b[0]), b)
+	for _, r := range bytes.Runes(b[0]) {
+		if !unicode.IsDigit(r) {
+			//fmt.Printf("onlyDigits(): -> \t%t\n", false)
+			return false
+		}
 	}
-
-	return Variable{
-		name:  lhs,
-		value: rhs,
-	}, nil
+	//fmt.Printf("onlyDigits(): -> \t%t\n", true)
+	return true
 }
 
 // read the input from stdin, line by line
@@ -200,143 +137,65 @@ func input() []byte {
 }
 
 // creates a slice of tokens out of the input bytes
-func tokenize(b []byte) []Token {
-	lastRune, _ := utf8.DecodeLastRune(b)
-	if !unicode.IsDigit(lastRune) {
-		fmt.Println("Invalid expression")
-		return nil
-	}
-
+func tokenize(b []byte) ([]Token, error) {
 	var tokens []Token
 	// regular expression to match digits, operators, and parentheses
-	re := regexp.MustCompile(`\d+|[+\-*/()%]|-?\d+`)
+	re := regexp.MustCompile(`\w+|\d+|[+\-*/()%= ]|-?\d+`)
 	matches := re.FindAll(b, -1)
+
+	if bytes.Count(b, []byte("=")) > 1 {
+		return nil, errors.New("makeVar(): Invalid assignment (`=`) > 1")
+	}
 
 	var negative string
 	for i, match := range matches {
 		s := string(match)
-		if s == "-" && i == 0 {
-			// check if the next token is number, if not, it is just an operator
+		//fmt.Printf("tokenize(): ->\t%q\n", s)
+		if s == " " {
+			continue
+		}
+
+		// check if matched string consists of letters
+		if onlyLetters(match) {
+			//fmt.Printf("tokenize(): onlyLetters ->\t%q\n", match)
+			tokens = append(tokens, Token{rune(s[0]), 0, s})
+		} else if s == "-" && i == 0 {
+			// check if the next rune is number, if not, it is just an operator
 			if operator, err := strconv.Atoi(string(matches[i+1])); err != nil {
-				tokens = append(tokens, Token{rune(s[0]), operator})
+				tokens = append(tokens, Token{rune(s[0]), operator, ""})
 			}
 			negative = s
+		} else if s == "+" && i == 0 {
+			// check if next rune is number, if it is
+			if _, err := strconv.Atoi(string(matches[i+1])); err == nil {
+				continue
+			}
 		} else if value, err := strconv.Atoi(s); err == nil {
-			// check if the token is a `-`
+			// check if the rune is a `-`
 			if negative == "-" {
 				negative += s
 				val, _ := strconv.Atoi(negative)
-				tokens = append(tokens, Token{rune(s[0]), val})
+				tokens = append(tokens, Token{rune(s[0]), val, ""})
 			} else {
-				// check if the token is a number
-				tokens = append(tokens, Token{rune(s[0]), value})
+				// check if the rune is a number
+				tokens = append(tokens, Token{rune(s[0]), value, ""})
 			}
 		} else {
-			// if the token is not a number, it must be an operator or a parenthesis
-			tokens = append(tokens, Token{rune(s[0]), 0})
+			// if the rune is not a number, it must be an operator or a parenthesis
+			tokens = append(tokens, Token{rune(s[0]), 0, s})
 		}
 	}
-	return tokens
-}
 
-/*
-Expression Grammar
-
-Expression:
-    Term
-    Expression '+' Term
-    Expression '-' Term
-
-Term:
-    Primary
-    Term '*' Primary
-    Term '/' Primary
-    Term '%' Primary
-
-Primary:
-    Number
-    '('Expression')'
-
-Number:
-    integer literal
-*/
-
-// expression recursively evaluates the terms
-func (ts *TokenStream) expression() int {
-	left := ts.term()
-	//fmt.Printf("EXPRESSION(): Left->\t %v\n", left)
-	for {
-		t := ts.get()
-		//fmt.Printf("EXPRESSION(): Token-> %v\n", t)
-
-		if t == nil {
-			return left
-		}
-		if t.kind != '+' && t.kind != '-' {
-			ts.putBack()
-			//fmt.Printf("EXPRESSION(): putBack-> %v\n", t)
-			return left
-		}
-		right := ts.term()
-		if t.kind == '+' {
-			left += right
-		} else {
-			left -= right
-		}
+	// if there is no operator between numbers, it is invalid
+	if len(tokens) > 1 &&
+		(unicode.IsDigit(tokens[0].Kind) &&
+			unicode.IsDigit(tokens[1].Kind)) {
+		return nil, errors.New("tokenize(): Invalid expression (' ')")
 	}
-}
 
-// `term` will provide the primary for the expression
-func (ts *TokenStream) term() int {
-	left := ts.primary()
-	//fmt.Printf("TERM(): Left->\t %v\n", left)
+	//if len(tokens) > 1 && !unicode.IsDigit(tokens[len(tokens)-1].kind) {
+	//	return nil, errors.New("tokenize(): Invalid expression (last rune)")
+	//}
 
-	for {
-		t := ts.get()
-		//fmt.Printf("TERM(): Token-> %v\n", t)
-
-		if t == nil {
-			return left
-		}
-		switch t.kind {
-		case '*':
-			left *= ts.primary()
-		case '/':
-			left /= ts.primary()
-		case '%':
-			left %= ts.primary()
-		default:
-			ts.putBack()
-			return left
-		}
-	}
-}
-
-// `primary` returns the most basic component, a number
-func (ts *TokenStream) primary() int {
-	t := ts.get()
-	//fmt.Printf("PRIMARY(): Token-> %v\n", t)
-	if t == nil {
-		return 0
-	}
-	if t.kind == '(' {
-		result := ts.expression()
-		t := ts.get()
-		if t.kind != ')' {
-			fmt.Println("Error: expected ')'")
-			return 0
-		}
-		return result
-	}
-	if t.kind == '-' {
-		return -ts.primary()
-	}
-	if t.kind == '+' {
-		return ts.primary()
-	}
-	if t.value != 0 { // check if the token is a number
-		return t.value
-	}
-	//fmt.Println("Error: expected number or '('")
-	return 0
+	return tokens, nil
 }
