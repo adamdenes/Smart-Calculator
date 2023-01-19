@@ -44,83 +44,147 @@ func (ts *TokenStream) get() *Token {
 	return nil
 }
 
-func (a *Assignment) add(v Variable) {
+func (a *Assignment) add(v Variable) error {
+	// assign value of another Variable
+	if _, ok := (*a)[v.value]; ok {
+		(*a)[v.name] = (*a)[v.value]
+		return nil
+	}
 	num, err := strconv.Atoi(v.value)
-
 	if err != nil {
-		prev := a.lookup(v)
-		(*a)[v.name] = prev
-	} else if _, ok := (*a)[v.name]; !ok {
+		return errors.New("add(): Invalid assignment")
+	}
+
+	// create / update var
+	if _, ok := (*a)[v.name]; !ok {
 		(*a)[v.name] = num
 	} else {
 		(*a)[v.name] = num
 	}
+
+	return nil
 }
 
-func (a *Assignment) lookup(v Variable) int {
-	// check if the value is the same as one of the keys
-	for key := range *a {
-		if v.value == key {
-			return (*a)[key]
-		}
+func (a *Assignment) lookup(key string) error {
+	if len(*a) == 0 {
+		//	fmt.Println("lookup(): len(a) =", len(*a))
+		return nil
 	}
-	return 0
-}
 
-func (v *Variable) printVar() {
-	fmt.Println(v.value)
+	if content, ok := (*a)[key]; ok {
+		fmt.Println(content)
+		return nil
+	}
+	return errors.New("Unknown variable")
 }
 
 func main() {
 	var list []Token
-	v := Variable{}
 	a := make(Assignment)
 
 	for {
 		in := input()
 
-		// the input is a command
-		if bytes.HasPrefix(in, []byte("/")) || string(in) == "" {
-			switch string(in) {
-			case "/exit":
-				fmt.Println("Bye!")
-				os.Exit(0)
-			case "/help":
-				fmt.Println("The program tries to be a simple calculator")
-			case "":
-				continue
-			default:
-				fmt.Println("Unknown command")
-			}
-		} else if bytes.Contains(in, []byte("=")) {
+		switch {
+		case string(in) == "":
+			// no input, go next
+			continue
+		case isCmd(in):
+			// the input is a command
+			doCmd(in)
+		case isAssignment(in):
 			// the input is an assignment
-			v = makeVar(in)
-			a.add(v)
-		} else if content, ok := a[string(in)]; ok {
-			fmt.Println(content)
-		} else {
+			doAssign(in, a)
+		default:
 			// the input is an expression
-			err := sanitize(in)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
 			list = tokenize(in)
-			// fill the token stream
-			ts := TokenStream{list, 0}
-
-			fmt.Println(ts.expression())
+			if list != nil {
+				// fill the token stream
+				ts := TokenStream{list, 0}
+				fmt.Println(ts.expression())
+			}
 		}
 	}
 }
 
-func makeVar(b []byte) Variable {
+func isCmd(b []byte) bool {
+	if bytes.HasPrefix(b, []byte("/")) || string(b) == "" {
+		return true
+	}
+	return false
+}
+
+func doCmd(b []byte) {
+	switch string(b) {
+	case "/exit":
+		fmt.Println("Bye!")
+		os.Exit(0)
+	case "/help":
+		fmt.Println("The program tries to be a simple calculator")
+	default:
+		fmt.Println("Unknown command")
+	}
+}
+
+func isAssignment(b []byte) bool {
+	if bytes.Contains(b, []byte("=")) &&
+		unicode.IsLetter(bytes.Runes(b)[0]) {
+		return true
+	}
+	return false
+}
+
+func doAssign(b []byte, m Assignment) {
+	v, assignErr := makeVar(b)
+
+	if assignErr != nil {
+		fmt.Println(assignErr)
+		return
+	}
+
+	err := m.lookup(v.name)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	addErr := m.add(v)
+	if addErr != nil {
+		fmt.Println(addErr)
+		return
+	}
+}
+
+func makeVar(b []byte) (Variable, error) {
+	if bytes.Count(b, []byte("=")) > 1 {
+		return Variable{}, errors.New("makeVar(): Invalid assignment")
+	}
+
 	re := regexp.MustCompile(`\w+|-?\d+`)
 	matches := re.FindAll(b, -1)
-	return Variable{
-		name:  string(matches[0]),
-		value: string(matches[1]),
+
+	var lhs string
+	if len(matches) != 0 {
+		lhs = string(matches[0])
 	}
+
+	for _, r := range lhs {
+		if !unicode.IsLetter(r) {
+			return Variable{}, errors.New("makeVar(): Invalid identifier")
+		}
+	}
+
+	var rhs string
+	if len(matches) == 1 {
+		rhs = string(matches[0])
+	} else {
+		rhs = string(matches[1])
+	}
+
+	return Variable{
+		name:  lhs,
+		value: rhs,
+	}, nil
 }
 
 // read the input from stdin, line by line
@@ -135,21 +199,13 @@ func input() []byte {
 	return bytes.TrimSpace(line)
 }
 
-// check for invalid expressions
-func sanitize(b []byte) error {
-	err := "Invalid expression"
-
-	// err if operator is last or not digit
-	lastRune, _ := utf8.DecodeLastRune(b)
-	if !unicode.IsDigit(lastRune) {
-		return errors.New(err)
-	}
-
-	return nil
-}
-
 // creates a slice of tokens out of the input bytes
 func tokenize(b []byte) []Token {
+	lastRune, _ := utf8.DecodeLastRune(b)
+	if !unicode.IsDigit(lastRune) {
+		fmt.Println("Invalid expression")
+		return nil
+	}
 
 	var tokens []Token
 	// regular expression to match digits, operators, and parentheses
