@@ -16,6 +16,7 @@ const (
 	RHS
 )
 
+// Token describes a single character from the input
 type Token struct {
 	Kind  rune
 	Value int
@@ -53,17 +54,18 @@ func main() {
 	}
 }
 
+// validate the left-hand side and right-hand side
 func checkOperands(operand *Token, a *Assignment, side int) error {
 	switch side {
 	case LHS:
 		if !onlyLetters([]byte(operand.Name)) {
-			fmt.Println("checkLhs(): Invalid identifier LHS")
+			//fmt.Println("checkLhs(): Invalid identifier LHS")
 			return errors.New("Invalid identifier")
 		}
 	case RHS:
 		if unicode.IsLetter(operand.Kind) {
 			if !onlyLetters([]byte(operand.Name)) {
-				fmt.Println("checkRhs(): Invalid assignment RHS")
+				//fmt.Println("checkRhs(): Invalid assignment RHS")
 				return errors.New("Invalid assignment")
 			}
 			val, lookupErr := a.lookup(operand.Name)
@@ -74,13 +76,14 @@ func checkOperands(operand *Token, a *Assignment, side int) error {
 			return nil
 		}
 		if !onlyDigits([]byte(operand.Name)) {
-			fmt.Println("checkRhs(): Invalid assignment RHS")
+			//fmt.Println("checkRhs(): Invalid assignment RHS")
 			return errors.New("Invalid assignment")
 		}
 	}
 	return nil
 }
 
+// add a `Variable` to the `Assignment` map
 func defineVar(name string, val int, a *Assignment) error {
 	err := a.add(Variable{name, strconv.Itoa(val)})
 	if err != nil {
@@ -89,6 +92,7 @@ func defineVar(name string, val int, a *Assignment) error {
 	return nil
 }
 
+// determines if the input is a command
 func isCmd(b []byte) bool {
 	if bytes.HasPrefix(b, []byte("/")) || string(b) == "" {
 		return true
@@ -96,6 +100,7 @@ func isCmd(b []byte) bool {
 	return false
 }
 
+// executes command
 func doCmd(b []byte) {
 	switch string(b) {
 	case "/exit":
@@ -108,6 +113,7 @@ func doCmd(b []byte) {
 	}
 }
 
+// checks if the bytes only contain letters
 func onlyLetters(b ...[]byte) bool {
 	for _, r := range bytes.Runes(b[0]) {
 		if !unicode.IsLetter(r) {
@@ -117,6 +123,7 @@ func onlyLetters(b ...[]byte) bool {
 	return true
 }
 
+// checks if the bytes only contain digits
 func onlyDigits(b ...[]byte) bool {
 	for _, r := range bytes.Runes(b[0]) {
 		if !unicode.IsDigit(r) {
@@ -138,6 +145,7 @@ func input() []byte {
 	return bytes.TrimSpace(line)
 }
 
+// checks for digits and letters at the same time
 func isMixed(b ...[]byte) bool {
 	return onlyDigits(b...) || onlyLetters(b...)
 }

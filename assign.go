@@ -7,11 +7,14 @@ import (
 
 type Assignment map[string]int
 
+// Variable represents a variable that can hold the value
+// of a `statement`
 type Variable struct {
 	Name  string
 	Value string
 }
 
+// adds or updates a single `Variable` to the `Assignment` map
 func (a *Assignment) add(v Variable) error {
 	// assign value of another Variable
 	//fmt.Printf("add(): name=%q value=%q\n", v.Name, v.Value)
@@ -37,6 +40,7 @@ func (a *Assignment) add(v Variable) error {
 	return nil
 }
 
+// looks up a single key in the `Assignment` and returns its value
 func (a *Assignment) lookup(key string) (int, error) {
 	if num, ok := (*a)[key]; ok {
 		return num, nil

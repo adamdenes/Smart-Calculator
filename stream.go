@@ -4,17 +4,21 @@ import (
 	"fmt"
 )
 
+// TokenStream creates a buffer to hold the tokens
+// after tokenization and keeps track of them
 type TokenStream struct {
 	Tokens []Token // slice of tokens
 	Pos    int     // current position in the slice
 }
 
+// puts a `Token` back to the buffer
 func (ts *TokenStream) putBack() {
 	if ts.Pos > 0 {
 		ts.Pos--
 	}
 }
 
+// retrieves a `Token` from the buffer
 func (ts *TokenStream) get() *Token {
 	if ts.Pos < len(ts.Tokens) {
 		t := &ts.Tokens[ts.Pos]
@@ -24,6 +28,7 @@ func (ts *TokenStream) get() *Token {
 	return nil
 }
 
+// declares a variable
 func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 	lhs := ts.get() // var name
 
@@ -44,12 +49,12 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 
 	t2 := ts.get() // equal sign
 	if t2.Kind != '=' {
-		fmt.Println("declaration(): Invalid expression (=)")
+		//fmt.Println("declaration(): Invalid expression (=)")
 		return 0, fmt.Errorf("Invalid expression")
 	}
 
 	if len(ts.Tokens) < 3 {
-		fmt.Println("declaration(): Invalid assignment RHS")
+		//fmt.Println("declaration(): Invalid assignment RHS")
 		return 0, fmt.Errorf("Invalid assignment")
 	}
 
@@ -71,6 +76,8 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 	return res, nil
 }
 
+// statement will evaluate the input, either by processing the expression
+// or by doing a declaration
 func (ts *TokenStream) statement(a *Assignment) (int, error) {
 	t := ts.get()
 	switch t.Name {
@@ -134,7 +141,7 @@ func (ts *TokenStream) expression() int {
 	}
 }
 
-// `term` will provide the primary for the expression
+// term will provide the primary for the expression
 func (ts *TokenStream) term() int {
 	left := ts.primary()
 	//fmt.Printf("TERM(): Left->\t %v\n", left)
@@ -160,7 +167,7 @@ func (ts *TokenStream) term() int {
 	}
 }
 
-// `primary` returns the most basic component, a number
+// primary returns the most basic component, a number
 func (ts *TokenStream) primary() int {
 	t := ts.get()
 	//fmt.Printf("PRIMARY(): Token-> %v\n", t)
