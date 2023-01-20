@@ -36,24 +36,25 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 	if len(ts.Tokens) == 1 {
 		lookup, lookupErr := a.lookup(lhs.Name)
 		if lookupErr != nil {
-			//fmt.Println(lookupErr)
 			return 0, fmt.Errorf("%w", lookupErr)
 		}
+		//fmt.Println(lookup)
 		return lookup, nil
 	}
 
 	t2 := ts.get() // equal sign
 	if t2.Kind != '=' {
-		//fmt.Println("declaration(): Invalid expression (=)")
+		fmt.Println("declaration(): Invalid expression (=)")
 		return 0, fmt.Errorf("Invalid expression")
 	}
 
 	if len(ts.Tokens) < 3 {
-		//fmt.Println("declaration(): Invalid assignment RHS")
+		fmt.Println("declaration(): Invalid assignment RHS")
 		return 0, fmt.Errorf("Invalid assignment")
 	}
 
 	rhs := ts.get()
+	fmt.Println(rhs)
 	rhsErr := checkOperands(rhs, a, RHS)
 	if rhsErr != nil {
 		//fmt.Println(rhsErr)
