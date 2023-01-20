@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type TokenStream struct {
 	Tokens []Token // slice of tokens
@@ -22,33 +24,33 @@ func (ts *TokenStream) get() *Token {
 	return nil
 }
 
-func (ts *TokenStream) declaration(a *Assignment) int {
+func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 	lhs := ts.get() // var name
 
 	lhsErr := checkOperands(lhs, a, LHS)
 	if lhsErr != nil {
-		fmt.Println(lhsErr)
-		return 0
+		//fmt.Println(lhsErr)
+		return 0, fmt.Errorf("%w", lhsErr)
 	}
 
 	if len(ts.Tokens) == 1 {
-		lookup, err := a.lookup(string(lhs.Kind))
-		if err != nil {
-			fmt.Println(err)
-			return 0
+		lookup, lookupErr := a.lookup(string(lhs.Kind))
+		if lookupErr != nil {
+			//fmt.Println(lookupErr)
+			return 0, fmt.Errorf("%w", lookupErr)
 		}
-		return lookup
+		return lookup, nil
 	}
 
 	t2 := ts.get() // equal sign
 	if t2.Kind != '=' {
-		fmt.Println("declaration(): Invalid expression (=)")
-		return 0
+		//fmt.Println("declaration(): Invalid expression (=)")
+		return 0, fmt.Errorf("Invalid expression")
 	}
 
 	if len(ts.Tokens) < 3 {
-		fmt.Println("declaration(): Invalid assignment RHS")
-		return 0
+		//fmt.Println("declaration(): Invalid assignment RHS")
+		return 0, fmt.Errorf("Invalid assignment")
 	}
 
 	rhs := ts.get()
@@ -56,35 +58,37 @@ func (ts *TokenStream) declaration(a *Assignment) int {
 		temp := ts.get()
 		rhs.Name = ""
 		rhs.Value = -(temp.Value)
-		fmt.Println(rhs)
-		// maybe putBack
 	}
 
 	rhsErr := checkOperands(rhs, a, RHS)
 	if rhsErr != nil {
-		fmt.Println(rhsErr)
-		return 0
+		//fmt.Println(rhsErr)
+		return 0, fmt.Errorf("%w", rhsErr)
 	}
 	ts.putBack()
 
 	res := ts.expression()
 	err := defineVar(lhs.Name, res, a)
 	if err != nil {
-		fmt.Println(err)
-		return 0
+		//fmt.Println(err)
+		return 0, fmt.Errorf("%w", err)
 	}
-	return res
+	return res, nil
 }
 
-func (ts *TokenStream) statement(a *Assignment) int {
+func (ts *TokenStream) statement(a *Assignment) (int, error) {
 	t := ts.get()
 	switch t.Name {
 	case "":
 		ts.putBack()
-		return ts.expression()
+		return ts.expression(), nil
 	default:
 		ts.putBack()
-		return ts.declaration(a)
+		result, err := ts.declaration(a)
+		if err != nil {
+			return 0, err
+		}
+		return result, nil
 	}
 }
 
@@ -164,7 +168,7 @@ func (ts *TokenStream) term() int {
 // `primary` returns the most basic component, a number
 func (ts *TokenStream) primary() int {
 	t := ts.get()
-	fmt.Printf("PRIMARY(): Token-> %v\n", t)
+	//fmt.Printf("PRIMARY(): Token-> %v\n", t)
 	if t == nil {
 		return 0
 	}

@@ -43,8 +43,11 @@ func main() {
 			} else {
 				// fill the token stream
 				ts := TokenStream{list, 0}
-				fmt.Printf("%v\n", ts)
-				fmt.Println(ts.statement(&a))
+				statement, sErr := ts.statement(&a)
+				if sErr != nil {
+					fmt.Println(sErr)
+				}
+				fmt.Println(statement)
 			}
 		}
 	}
@@ -53,19 +56,21 @@ func main() {
 func checkOperands(operand *Token, a *Assignment, side int) error {
 	switch side {
 	case LHS:
-		fmt.Printf("\t-> LHS operand.name=%q\n", operand.Name)
-
 		if !onlyLetters([]byte(operand.Name)) {
 			return errors.New("checkLhs(): Invalid identifier LHS")
 		}
 	case RHS:
-		fmt.Printf("\t-> RHS operand.name=%q\n", operand.Name)
-
-		val, lookupErr := a.lookup(string(operand.Kind))
-		fmt.Printf("what is this val=%v, error=%v\n", val, lookupErr)
-		operand.Value = val
-		fmt.Printf("kind=%q, val=%v, name=%q\n", operand.Kind, operand.Value, operand.Name)
-
+		if unicode.IsLetter(operand.Kind) {
+			if !onlyLetters([]byte(operand.Name)) {
+				return errors.New("checkRhs(): Invalid assignment RHS")
+			}
+			val, lookupErr := a.lookup(operand.Name)
+			if lookupErr != nil {
+				return lookupErr
+			}
+			operand.Value = val
+			return nil
+		}
 		if !onlyDigits([]byte(operand.Name)) {
 			return errors.New("checkRhs(): Invalid assignment RHS")
 		}
