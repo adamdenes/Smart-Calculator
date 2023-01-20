@@ -57,12 +57,14 @@ func checkOperands(operand *Token, a *Assignment, side int) error {
 	switch side {
 	case LHS:
 		if !onlyLetters([]byte(operand.Name)) {
-			return errors.New("checkLhs(): Invalid identifier LHS")
+			//fmt.Println("checkLhs(): Invalid identifier LHS")
+			return errors.New("Invalid identifier LHS")
 		}
 	case RHS:
 		if unicode.IsLetter(operand.Kind) {
 			if !onlyLetters([]byte(operand.Name)) {
-				return errors.New("checkRhs(): Invalid assignment RHS")
+				//fmt.Println("checkRhs(): Invalid assignment RHS")
+				return errors.New("Invalid assignment RHS")
 			}
 			val, lookupErr := a.lookup(operand.Name)
 			if lookupErr != nil {
@@ -72,7 +74,8 @@ func checkOperands(operand *Token, a *Assignment, side int) error {
 			return nil
 		}
 		if !onlyDigits([]byte(operand.Name)) {
-			return errors.New("checkRhs(): Invalid assignment RHS")
+			//fmt.Println("checkRhs(): Invalid assignment RHS")
+			return errors.New("Invalid assignment RHS")
 		}
 	}
 	return nil
@@ -144,13 +147,21 @@ func input() []byte {
 // creates a slice of tokens out of the input bytes
 func tokenize(b []byte) ([]Token, error) {
 	var tokens []Token
+
+	if bytes.Count(b, []byte("=")) > 1 {
+		//fmt.Println("makeVar(): Invalid assignment (`=`) > 1")
+		return nil, errors.New("Invalid assignment")
+	}
+
+	rs := bytes.Runes(b)
+	if !unicode.IsDigit(rs[len(rs)-1]) && !onlyLetters(b) && !bytes.Contains(b, []byte("=")) {
+		//fmt.Println("tokenize(): Invalid expression (last rune)")
+		return nil, errors.New("Invalid expression")
+	}
+
 	// regular expression to match digits, operators, and parentheses
 	re := regexp.MustCompile(`\w+|\d+|[+\-*/()%= ]|-?\d+`)
 	matches := re.FindAll(b, -1)
-
-	if bytes.Count(b, []byte("=")) > 1 {
-		return nil, errors.New("makeVar(): Invalid assignment (`=`) > 1")
-	}
 
 	var negative string
 	for i, match := range matches {
@@ -164,7 +175,7 @@ func tokenize(b []byte) ([]Token, error) {
 		if onlyLetters(match) {
 			//fmt.Printf("tokenize(): onlyLetters ->\t%q\n", match)
 			tokens = append(tokens, Token{rune(s[0]), 0, s})
-		} else if s == "-" && i == 0 {
+		} else if s == "-" {
 			// check if the next rune is number, if not, it is just an operator
 			if operator, err := strconv.Atoi(string(matches[i+1])); err != nil {
 				tokens = append(tokens, Token{rune(s[0]), operator, ""})
@@ -195,12 +206,9 @@ func tokenize(b []byte) ([]Token, error) {
 	if len(tokens) > 1 &&
 		(unicode.IsDigit(tokens[0].Kind) &&
 			unicode.IsDigit(tokens[1].Kind)) {
-		return nil, errors.New("tokenize(): Invalid expression (' ')")
+		//fmt.Println("tokenize(): Invalid expression (' ')")
+		return nil, errors.New("Invalid expression")
 	}
-
-	//if len(tokens) > 1 && !unicode.IsDigit(tokens[len(tokens)-1].kind) {
-	//	return nil, errors.New("tokenize(): Invalid expression (last rune)")
-	//}
 
 	return tokens, nil
 }

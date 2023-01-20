@@ -34,7 +34,7 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 	}
 
 	if len(ts.Tokens) == 1 {
-		lookup, lookupErr := a.lookup(string(lhs.Kind))
+		lookup, lookupErr := a.lookup(lhs.Name)
 		if lookupErr != nil {
 			//fmt.Println(lookupErr)
 			return 0, fmt.Errorf("%w", lookupErr)
@@ -54,12 +54,6 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 	}
 
 	rhs := ts.get()
-	if rhs.Name == "-" {
-		temp := ts.get()
-		rhs.Name = ""
-		rhs.Value = -(temp.Value)
-	}
-
 	rhsErr := checkOperands(rhs, a, RHS)
 	if rhsErr != nil {
 		//fmt.Println(rhsErr)
