@@ -38,6 +38,7 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 		return 0, fmt.Errorf("%w", lhsErr)
 	}
 
+	// there is only an LHS
 	if len(ts.Tokens) == 1 {
 		lookup, lookupErr := a.lookup(lhs.Name)
 		if lookupErr != nil {
@@ -47,7 +48,7 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 		return lookup, nil
 	}
 
-	t2 := ts.get() // equal sign
+	t2 := ts.get()
 	if t2.Kind != '=' {
 		//fmt.Println("declaration(): Invalid expression (=)")
 		return 0, fmt.Errorf("Invalid expression")
@@ -59,7 +60,11 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 	}
 
 	rhs := ts.get()
-	fmt.Println(rhs)
+	if rhs.Kind == '-' {
+		next := ts.get()
+		rhs = next
+		rhs.Value *= -1
+	}
 	rhsErr := checkOperands(rhs, a, RHS)
 	if rhsErr != nil {
 		//fmt.Println(rhsErr)
@@ -76,12 +81,29 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 	return res, nil
 }
 
+// converts/looks up the variables
+func (ts *TokenStream) changeVarsInTokenStream(a *Assignment) {
+	for i := range ts.Tokens {
+		// NOTE: range loop wouldn't change the values of the slice...
+		if num, ok := checkVar(ts.Tokens[i].Name, a); ok {
+			//fmt.Printf("checkTokens(): ->%v : %v\n", ts.Tokens[i], num)
+			ts.Tokens[i].Value = num
+			ts.Tokens[i].Name = ""
+		}
+		//fmt.Println("changeVarsInTokenStream(): ->", ts.Tokens[i])
+	}
+}
+
 // statement will evaluate the input, either by processing the expression
 // or by doing a declaration
 func (ts *TokenStream) statement(a *Assignment) (int, error) {
+	ts.changeVarsInTokenStream(a)
+	//fmt.Printf("statement(): ->%v\n", ts)
 	t := ts.get()
-	switch t.Name {
-	case "":
+	//fmt.Printf("statement(): ->%v Pos=%v\n", t, ts.Pos)
+
+	switch {
+	case t.Name == "":
 		ts.putBack()
 		return ts.expression(), nil
 	default:

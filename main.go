@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"unicode"
+	"unicode/utf8"
 )
 
 const (
@@ -38,19 +39,23 @@ func main() {
 			doCmd(in)
 		default:
 			// the input is an expression
-			list, err := tokenize(in)
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				// fill the token stream
-				ts := TokenStream{list, 0}
-				statement, sErr := ts.statement(&a)
-				if sErr != nil {
-					fmt.Println(sErr)
-				}
-				fmt.Println(statement)
-			}
+			calculate(in, &a)
 		}
+	}
+}
+
+func calculate(b []byte, a *Assignment) {
+	list, err := tokenize(b)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		ts := TokenStream{list, 0}
+		fmt.Printf("calculate(): -> t=%v\n", ts)
+		statement, sErr := ts.statement(a)
+		if sErr != nil {
+			fmt.Println(sErr)
+		}
+		fmt.Println(statement)
 	}
 }
 
@@ -90,6 +95,16 @@ func defineVar(name string, val int, a *Assignment) error {
 		return err
 	}
 	return nil
+}
+
+func checkVar(key string, a *Assignment) (int, bool) {
+	lookup, lookupErr := a.lookup(key)
+	if lookupErr != nil {
+		//fmt.Println("checkVar(): ERROR ->\t", lookupErr)
+		return 0, false
+	}
+	//fmt.Println("checkVar(): true ->\t", lookup)
+	return lookup, true
 }
 
 // determines if the input is a command
@@ -145,11 +160,6 @@ func input() []byte {
 	return bytes.TrimSpace(line)
 }
 
-// checks for digits and letters at the same time
-func isMixed(b ...[]byte) bool {
-	return onlyDigits(b...) || onlyLetters(b...)
-}
-
 // creates a slice of tokens out of the input bytes
 func tokenize(b []byte) ([]Token, error) {
 	var tokens []Token
@@ -159,8 +169,8 @@ func tokenize(b []byte) ([]Token, error) {
 		return nil, errors.New("Invalid assignment")
 	}
 
-	rs := bytes.Runes(b)
-	if !unicode.IsDigit(rs[len(rs)-1]) && !isMixed(b) && !bytes.Contains(b, []byte("=")) {
+	r, _ := utf8.DecodeLastRune(b)
+	if unicode.Is(unicode.Sm, r) || unicode.IsPunct(r) {
 		//fmt.Println("tokenize(): Invalid expression (last rune)")
 		return nil, errors.New("Invalid expression")
 	}
@@ -179,9 +189,7 @@ func tokenize(b []byte) ([]Token, error) {
 
 		// check if matched string consists of letters
 		if onlyLetters(match) {
-			//fmt.Printf("tokenize(): onlyLetters ->\t%q\n", match)
 			tokens = append(tokens, Token{rune(s[0]), 0, s})
-
 		} else if s == "-" && i == 0 {
 			// check if the next rune is number, if not, it is just an operator
 			if operator, err := strconv.Atoi(string(matches[i+1])); err != nil {
