@@ -55,6 +55,10 @@ func calculate(b []byte, a *Assignment) {
 		if sErr != nil {
 			fmt.Println(sErr)
 		}
+		// don't output the result for assignments, only if queried
+		//if len(ts.Tokens) > 1 && ts.Tokens[1].Name == "=" {
+		//	return
+		//}
 		fmt.Println(statement)
 	}
 }
