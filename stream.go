@@ -86,11 +86,11 @@ func (ts *TokenStream) changeVarsInTokenStream(a *Assignment) {
 	for i := range ts.Tokens {
 		// NOTE: range loop wouldn't change the values of the slice...
 		if num, ok := checkVar(ts.Tokens[i].Name, a); ok {
-			fmt.Printf("checkTokens(): ->%v : %v\n", ts.Tokens[i], num)
+			//fmt.Printf("checkTokens(): ->%v : %v\n", ts.Tokens[i], num)
 			ts.Tokens[i].Value = num
 			ts.Tokens[i].Name = ""
 		}
-		fmt.Println("changeVarsInTokenStream(): ->", ts.Tokens[i])
+		//fmt.Println("changeVarsInTokenStream(): ->", ts.Tokens[i])
 	}
 }
 

@@ -50,15 +50,16 @@ func calculate(b []byte, a *Assignment) {
 		fmt.Println(err)
 	} else {
 		ts := TokenStream{list, 0}
-		fmt.Printf("calculate(): -> t=%v\n", ts)
+		//fmt.Printf("calculate(): -> t=%v\n", ts)
 		statement, sErr := ts.statement(a)
 		if sErr != nil {
 			fmt.Println(sErr)
+			return
 		}
 		// don't output the result for assignments, only if queried
-		//if len(ts.Tokens) > 1 && ts.Tokens[1].Name == "=" {
-		//	return
-		//}
+		if len(ts.Tokens) > 1 && ts.Tokens[1].Name == "=" {
+			return
+		}
 		fmt.Println(statement)
 	}
 }
