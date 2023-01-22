@@ -81,3 +81,47 @@ Unknown command
 > /exit
 Bye!
 ```
+
+## Stage 6/7: Variables
+
+The program should support variables. Use a `map[string]int` to store them.
+
+Rules for variables:
+
+   - We suppose that the name of a variable (identifier) can contain only Latin letters.
+   - A variable can have a name consisting of more than one letter.
+   - The case is also important; your program should be able to take both lowercase and uppercase variables.
+   - The value can be an integer number or a value of another variable.
+   - It should be possible to set a new value to an existing variable.
+   - To print the value of a variable, you should just type its name.
+
+Incorrect spelling or declaration of variables should also throw an exception with the corresponding message to the user:
+- First, the variable is checked for correctness. If the user inputs an invalid variable name, then the output should be 
+"Invalid identifier".
+```
+> a2a
+Invalid identifier
+> n22
+Invalid identifier
+```
+- If a variable is valid but not declared yet, the program should print "Unknown variable".
+```
+> a = 8
+> b = c
+Unknown variable
+> e
+Unknown variable
+```
+- If an identifier or value of a variable is invalid during variable declaration, the program must print a message like 
+the one below.
+```
+> a1 = 8
+Invalid identifier
+> n1 = a2a
+Invalid identifier
+> n = a2a
+Invalid assignment
+> a = 7 = 8
+Invalid assignment
+```
+Handle as many incorrect inputs as possible. The program must never throw an exception of any kind.
