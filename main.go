@@ -68,8 +68,8 @@ func calculate(b []byte, a *Assignment) {
 func checkOperands(operand *Token, a *Assignment, side int) error {
 	switch side {
 	case LHS:
-		if !onlyLetters([]byte(operand.Name)) {
-			//fmt.Println("checkLhs(): Invalid identifier LHS")
+		if !onlyLetters([]byte(operand.Name)) || operand.Kind == '(' || operand.Kind == ')' {
+			fmt.Println("checkLhs(): Invalid identifier LHS")
 			return errors.New("Invalid identifier")
 		}
 	case RHS:
@@ -175,8 +175,8 @@ func tokenize(b []byte) ([]Token, error) {
 	}
 
 	r, _ := utf8.DecodeLastRune(b)
-	if unicode.Is(unicode.Sm, r) || unicode.IsPunct(r) {
-		//fmt.Println("tokenize(): Invalid expression (last rune)")
+	if unicode.Is(unicode.Sm, r) || unicode.IsPunct(r) && r != ')' {
+		fmt.Println("tokenize(): Invalid expression (last rune)")
 		return nil, errors.New("Invalid expression")
 	}
 
@@ -195,6 +195,10 @@ func tokenize(b []byte) ([]Token, error) {
 		// check if matched string consists of letters
 		if onlyLetters(match) {
 			tokens = append(tokens, Token{rune(s[0]), 0, s})
+		} else if s == "/" && string(matches[i+1]) == "/" ||
+			s == "*" && string(matches[i+1]) == "*" {
+			// check if the next rune is also a '/' or '*'
+			return nil, errors.New("Invalid expression")
 		} else if s == "-" && i == 0 {
 			// check if the next rune is number, if not, it is just an operator
 			if operator, err := strconv.Atoi(string(matches[i+1])); err != nil {

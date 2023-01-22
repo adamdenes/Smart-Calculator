@@ -86,11 +86,11 @@ func (ts *TokenStream) changeVarsInTokenStream(a *Assignment) {
 	for i := range ts.Tokens {
 		// NOTE: range loop wouldn't change the values of the slice...
 		if num, ok := checkVar(ts.Tokens[i].Name, a); ok {
-			fmt.Printf("checkTokens(): ->%v : %v\n", ts.Tokens[i], num)
+			//fmt.Printf("checkTokens(): ->%v : %v\n", ts.Tokens[i], num)
 			ts.Tokens[i].Value = num
 			ts.Tokens[i].Name = ""
 		}
-		fmt.Println("changeVarsInTokenStream(): ->", ts.Tokens[i])
+		//fmt.Println("changeVarsInTokenStream(): ->", ts.Tokens[i])
 	}
 }
 
@@ -143,17 +143,13 @@ Number:
 // expression recursively evaluates the terms
 func (ts *TokenStream) expression() int {
 	left := ts.term()
-	//fmt.Printf("EXPRESSION(): Left->\t %v\n", left)
 	for {
 		t := ts.get()
-		//fmt.Printf("EXPRESSION(): Token-> %v\n", t)
-
 		if t == nil {
 			return left
 		}
 		if t.Kind != '+' && t.Kind != '-' {
 			ts.putBack()
-			//fmt.Printf("EXPRESSION(): putBack-> %v\n", t)
 			return left
 		}
 		right := ts.term()
@@ -168,12 +164,8 @@ func (ts *TokenStream) expression() int {
 // term will provide the primary for the expression
 func (ts *TokenStream) term() int {
 	left := ts.primary()
-	//fmt.Printf("TERM(): Left->\t %v\n", left)
-
 	for {
 		t := ts.get()
-		//fmt.Printf("TERM(): Token-> %v\n", t)
-
 		if t == nil {
 			return left
 		}
@@ -194,15 +186,14 @@ func (ts *TokenStream) term() int {
 // primary returns the most basic component, a number
 func (ts *TokenStream) primary() int {
 	t := ts.get()
-	//fmt.Printf("PRIMARY(): Token-> %v\n", t)
 	if t == nil {
 		return 0
 	}
 	if t.Kind == '(' {
 		result := ts.expression()
-		t := ts.get()
-		if t.Kind != ')' {
-			fmt.Println("Error: expected ')'")
+		t = ts.get()
+		if t == nil /* t.Kind != ')'*/ {
+			fmt.Println("Invalid expression")
 			return 0
 		}
 		return result
@@ -216,6 +207,5 @@ func (ts *TokenStream) primary() int {
 	if t.Value != 0 { // check if the token is a number
 		return t.Value
 	}
-	//fmt.Println("Error: expected number or '('")
 	return 0
 }
