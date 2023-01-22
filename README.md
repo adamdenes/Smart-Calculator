@@ -125,3 +125,25 @@ Invalid assignment
 Invalid assignment
 ```
 Handle as many incorrect inputs as possible. The program must never throw an exception of any kind.
+### Examples
+```
+> a  =  3
+> b= 4
+> c =5
+> a + b - c
+2
+> b - c + 4 - a
+0
+> X = 800
+> Y=4
+> Z= 5
+> X + Y + Z
+809
+> BIG = 9000
+> BIG
+9000
+> big
+Unknown variable
+> /exit
+Bye!
+```
