@@ -29,7 +29,6 @@ func main() {
 
 	for {
 		in := input()
-
 		switch {
 		case string(in) == "":
 			// no input, go next
@@ -50,7 +49,6 @@ func calculate(b []byte, a *Assignment) {
 		fmt.Println(err)
 	} else {
 		ts := TokenStream{list, 0}
-		//fmt.Printf("calculate(): -> t=%v\n", ts)
 		statement, sErr := ts.statement(a)
 		if sErr != nil {
 			fmt.Println(sErr)
@@ -64,18 +62,27 @@ func calculate(b []byte, a *Assignment) {
 	}
 }
 
+// count '(' and ')' and compare their numbers
+func openingEqualsClosingParenthesis(b []byte) bool {
+	opening := bytes.Count(b, []byte("("))
+	closing := bytes.Count(b, []byte(")"))
+
+	if opening != closing {
+		return false
+	}
+	return true
+}
+
 // validate the left-hand side and right-hand side
 func checkOperands(operand *Token, a *Assignment, side int) error {
 	switch side {
 	case LHS:
 		if !onlyLetters([]byte(operand.Name)) || operand.Kind == '(' || operand.Kind == ')' {
-			fmt.Println("checkLhs(): Invalid identifier LHS")
 			return errors.New("Invalid identifier")
 		}
 	case RHS:
 		if unicode.IsLetter(operand.Kind) {
 			if !onlyLetters([]byte(operand.Name)) {
-				//fmt.Println("checkRhs(): Invalid assignment RHS")
 				return errors.New("Invalid assignment")
 			}
 			val, lookupErr := a.lookup(operand.Name)
@@ -86,7 +93,6 @@ func checkOperands(operand *Token, a *Assignment, side int) error {
 			return nil
 		}
 		if !onlyDigits([]byte(operand.Name)) {
-			//fmt.Println("checkRhs(): Invalid assignment RHS")
 			return errors.New("Invalid assignment")
 		}
 	}
@@ -105,10 +111,8 @@ func defineVar(name string, val int, a *Assignment) error {
 func checkVar(key string, a *Assignment) (int, bool) {
 	lookup, lookupErr := a.lookup(key)
 	if lookupErr != nil {
-		//fmt.Println("checkVar(): ERROR ->\t", lookupErr)
 		return 0, false
 	}
-	//fmt.Println("checkVar(): true ->\t", lookup)
 	return lookup, true
 }
 
@@ -170,24 +174,25 @@ func tokenize(b []byte) ([]Token, error) {
 	var tokens []Token
 
 	if bytes.Count(b, []byte("=")) > 1 {
-		//fmt.Println("makeVar(): Invalid assignment (`=`) > 1")
 		return nil, errors.New("Invalid assignment")
+	}
+
+	if !openingEqualsClosingParenthesis(b) {
+		return nil, errors.New("Invalid expression")
 	}
 
 	r, _ := utf8.DecodeLastRune(b)
 	if unicode.Is(unicode.Sm, r) || unicode.IsPunct(r) && r != ')' {
-		fmt.Println("tokenize(): Invalid expression (last rune)")
 		return nil, errors.New("Invalid expression")
 	}
 
 	// regular expression to match digits, operators, and parentheses
-	re := regexp.MustCompile(`\w+|\d+|[+\-*/()%= ]|-?\d+`)
+	re := regexp.MustCompile(`\w+|\d+|[+\-*/()%=^ ]|-?\d+`)
 	matches := re.FindAll(b, -1)
 
 	var negative string
 	for i, match := range matches {
 		s := string(match)
-		//fmt.Printf("tokenize(): ->\t%q <-> %s\n", rune(s[0]), s)
 		if s == " " {
 			continue
 		}
@@ -230,7 +235,6 @@ func tokenize(b []byte) ([]Token, error) {
 	if len(tokens) > 1 &&
 		(unicode.IsDigit(tokens[0].Kind) &&
 			unicode.IsDigit(tokens[1].Kind)) {
-		//fmt.Println("tokenize(): Invalid expression (' ')")
 		return nil, errors.New("Invalid expression")
 	}
 

@@ -34,7 +34,6 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 
 	lhsErr := checkOperands(lhs, a, LHS)
 	if lhsErr != nil {
-		//fmt.Println(lhsErr)
 		return 0, fmt.Errorf("%w", lhsErr)
 	}
 
@@ -50,12 +49,10 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 
 	t2 := ts.get()
 	if t2.Kind != '=' {
-		//fmt.Println("declaration(): Invalid expression (=)")
 		return 0, fmt.Errorf("Invalid expression")
 	}
 
 	if len(ts.Tokens) < 3 {
-		//fmt.Println("declaration(): Invalid assignment RHS")
 		return 0, fmt.Errorf("Invalid assignment")
 	}
 
@@ -67,7 +64,6 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 	}
 	rhsErr := checkOperands(rhs, a, RHS)
 	if rhsErr != nil {
-		//fmt.Println(rhsErr)
 		return 0, fmt.Errorf("%w", rhsErr)
 	}
 	ts.putBack()
@@ -75,7 +71,6 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 	res := ts.expression()
 	err := defineVar(lhs.Name, res, a)
 	if err != nil {
-		//fmt.Println(err)
 		return 0, fmt.Errorf("%w", err)
 	}
 	return res, nil
@@ -86,11 +81,9 @@ func (ts *TokenStream) changeVarsInTokenStream(a *Assignment) {
 	for i := range ts.Tokens {
 		// NOTE: range loop wouldn't change the values of the slice...
 		if num, ok := checkVar(ts.Tokens[i].Name, a); ok {
-			//fmt.Printf("checkTokens(): ->%v : %v\n", ts.Tokens[i], num)
 			ts.Tokens[i].Value = num
 			ts.Tokens[i].Name = ""
 		}
-		//fmt.Println("changeVarsInTokenStream(): ->", ts.Tokens[i])
 	}
 }
 
@@ -110,6 +103,7 @@ func (ts *TokenStream) statement(a *Assignment) (int, error) {
 
 	switch {
 	case t.Name == "":
+		ts.changeVarsInTokenStream(a)
 		ts.putBack()
 		return ts.expression(), nil
 	default:

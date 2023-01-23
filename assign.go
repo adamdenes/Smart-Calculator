@@ -17,7 +17,6 @@ type Variable struct {
 // adds or updates a single `Variable` to the `Assignment` map
 func (a *Assignment) add(v Variable) error {
 	// assign value of another Variable
-	//fmt.Printf("add(): name=%q value=%q\n", v.Name, v.Value)
 	if _, ok := (*a)[v.Value]; ok {
 		(*a)[v.Name] = (*a)[v.Value]
 		return nil
@@ -25,15 +24,13 @@ func (a *Assignment) add(v Variable) error {
 
 	num, err := strconv.Atoi(v.Value)
 	if err != nil {
-		return errors.New("add(): Invalid assignment")
+		return errors.New("Invalid assignment")
 	}
 
 	// create / update var
 	if _, ok := (*a)[v.Name]; !ok {
-		//fmt.Printf("add(): update %q %v\n", v.Name, num)
 		(*a)[v.Name] = num
 	} else {
-		//fmt.Printf("add(): update %q %v\n", v.Name, num)
 		(*a)[v.Name] = num
 	}
 
