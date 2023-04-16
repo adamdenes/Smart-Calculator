@@ -79,7 +79,6 @@ func (ts *TokenStream) declaration(a *Assignment) (int, error) {
 // converts/looks up the variables
 func (ts *TokenStream) changeVarsInTokenStream(a *Assignment) {
 	for i := range ts.Tokens {
-		// NOTE: range loop wouldn't change the values of the slice...
 		if num, ok := checkVar(ts.Tokens[i].Name, a); ok {
 			ts.Tokens[i].Value = num
 			ts.Tokens[i].Name = ""
